@@ -3,6 +3,7 @@
 // This file is the code-behind for the 'MainWindow.xaml' file.
 
 // Currently no send email process. Need to figure out how to pull from a database such as Workday to find users managers. Will look into Farpa code for guidance.
+// Currently, ReportData.xlsx is only sorted by LastLoginDate (if available).
 
 //  There is one button that performs all necessary steps for the user to send user audit approval emails.  It is designed to be a one-click process for the user, and auto-detects the incoming file format.
 //  The system supports the following import file formats: XLSX, XLS, ODS, CSV
@@ -65,11 +66,18 @@ using System.Diagnostics.Eventing.Reader;
 //using System.Printing;
 using System.Collections.Specialized;
 using ExcelDataReader;
+using System.Threading.Tasks;
+using System.Windows.Media.Animation;
 
 namespace AuditTool
 {
     public partial class MainWindow : Window
     {
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+
         private DataTable LoadCsvIntoDataTable(string csvFilePath)
         {            
             var headerMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -228,9 +236,10 @@ namespace AuditTool
             public DateTime LastLoginDate { get; set; }
             public string UsersManager { get; set; }
             public string ManagerEmail { get; set; }
-        }
-    //  private void ImportFileButton_Click(object sender, RoutedEventArgs e)
-        private void ProcessFileButton_Click(object sender, RoutedEventArgs e)
+        }    
+
+        // method for processing the file on button click.
+        private async void ProcessFileButton_Click(object sender, RoutedEventArgs e)
         {
             // Open a file dialog to select the user list file
             OpenFileDialog openFileDialog = new OpenFileDialog();
@@ -247,17 +256,32 @@ namespace AuditTool
                 }
                 if (fileExtension != ".csv")
                 {
-                    MessageBox.Show("Unsupported file format.", "Error");
-                    return;
-                }
-                DataTable dataTable = LoadCsvIntoDataTable(filePath);
-                if (dataTable == null)
-                {
-                    MessageBox.Show("Failed to load data from the file.", "Error");
+                    MessageBox.Show("ConvertExcelToCsv method- Unsupported file format.", "Error");
                     return;
                 }
 
-                DataTable sortedDataTable = SortDataTable(dataTable);
+                // Update status text and show progress bar
+                statusText.Text = "Loading CSV data...";
+                progressBar.Visibility = Visibility.Visible;
+                progressBar.Value = 0;
+
+                // Start the animation
+                Storyboard progressBarAnimation = (Storyboard)FindResource("ProgressBarAnimation");
+                progressBarAnimation.Begin();
+
+                DataTable dataTable = await Task.Run(() => LoadCsvIntoDataTable(filePath));
+                if (dataTable == null)
+                {
+                    MessageBox.Show("LoadCsvIntoDataTable method Failed to load data from the file.", "Error");
+                    progressBarAnimation.Stop();
+                    progressBar.Visibility = Visibility.Collapsed;
+                    return;
+                }
+
+                progressBar.Value = 50;
+                statusText.Text = "Sorting data...";
+
+                DataTable sortedDataTable = await Task.Run(() => SortDataTable(dataTable));
                 string targetDirectory = @"C:\Temp\AuditTool\Output";
 
                 // Ensure the target directory exists
@@ -267,16 +291,30 @@ namespace AuditTool
                 }
 
                 string excelFilePath = Path.Combine(targetDirectory, "SortedData.xlsx");
-                SaveDataTableToExcel(sortedDataTable, excelFilePath);
+                await Task.Run(() => SaveDataTableToExcel(sortedDataTable, excelFilePath));
+
+                progressBar.Value = 100;
+                statusText.Text = "File processed successfully.";
+                progressBar.Visibility = Visibility.Collapsed;
+                progressBarAnimation.Stop();
                 MessageBox.Show($"File has been processed and saved to {excelFilePath}", "File Processed");
             }
+
             // Process the file and generate the report
             {
                 string sortedDataFilePath = "C:\\Temp\\AuditTool\\Output\\SortedData.xlsx";
                 string reportFilePath = "C:\\Temp\\AuditTool\\Output\\ReportData.xlsx";
-                // Load the data from the SortedData.xlsx file
-                DataTable dataTable = LoadDataFromExcel(sortedDataFilePath);
-                // Check if the "LastLoginDate" column exists
+
+                // Update status text and show progress bar
+                statusText.Text = "Loading data from Excel...";
+                progressBar.Visibility = Visibility.Visible;
+                progressBar.Value = 0;
+
+                // Start the animation
+                Storyboard progressBarAnimation = (Storyboard)FindResource("ProgressBarAnimation");
+                progressBarAnimation.Begin();
+
+                DataTable dataTable = await Task.Run(() => LoadDataFromExcel(sortedDataFilePath));
                 if (dataTable.Columns.Contains("LastLoginDate"))
                 {
                     // Add a new column for the converted DateTime values
@@ -294,23 +332,38 @@ namespace AuditTool
                             row["ConvertedLastLoginDate"] = DateTime.MinValue; // Example: setting to DateTime.MinValue
                         }
                     }
+
+                    progressBar.Value = 50;
+                    statusText.Text = "Sorting data by LastLoginDate...";
+
                     // Sort the data by the converted "LastLoginDate"
-                    var sortedData = dataTable.AsEnumerable()
+                    var sortedData = await Task.Run(() => dataTable.AsEnumerable()
                         .OrderBy(row => row.Field<DateTime>("ConvertedLastLoginDate"))
-                        .CopyToDataTable();
+                        .CopyToDataTable());
+
                     // Remove the temporary "ConvertedLastLoginDate" column
                     sortedData.Columns.Remove("ConvertedLastLoginDate");
+
                     // Save the sorted data to a new Excel file
-                    SaveDataToExcel(sortedData, reportFilePath);
+                    await Task.Run(() => SaveDataToExcel(sortedData, reportFilePath));
+
+                    progressBar.Value = 100;
+                    statusText.Text = "Report generated successfully.";
+                    progressBar.Visibility = Visibility.Collapsed;
+                    progressBarAnimation.Stop();
                     MessageBox.Show("Report generated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
                     // Continue processing without the "LastLoginDate" column
-                    SaveDataToExcel(dataTable, reportFilePath);
-                    MessageBox.Show("Report generated successfully without 'LastLoginDate' sorting!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    await Task.Run(() => SaveDataToExcel(dataTable, reportFilePath));
+                    progressBar.Value = 100;
+                    statusText.Text = "Report generated successfully, but without 'LastLoginDate' sorting!";
+                    progressBar.Visibility = Visibility.Collapsed;
+                    progressBarAnimation.Stop();
+                    MessageBox.Show("Report generated successfully, but without 'LastLoginDate' sorting!", "Success with no LastLoginDate", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-            } 
+            }
         }
 
         private string ConvertExcelToCsv(string excelFilePath)
@@ -554,8 +607,5 @@ namespace AuditTool
         //////////////////    mailItem.HTMLBody = emailBody;
         //////////////////    mailItem.Send();
         //////////////////}   
-    }    
+    }       
 }
-
-//button template for the xaml file
-// <Button Content="ImportFileButton" Click="ImportFileButton_Click" Template="{StaticResource CustomButtonTemplate}" Width="150" Height="50" Margin="22,75,350,200" />
