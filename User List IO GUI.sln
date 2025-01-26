@@ -5,6 +5,8 @@ VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "User List IO GUI", "User List IO GUI\User List IO GUI.csproj", "{BD9A2116-B476-4AF0-979B-BC89785C17FA}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Universal Translator v1", "Universal Translator v1\Universal Translator v1.vdproj", "{6CC3EAF3-BF73-49C7-8864-7DA1699CA22D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,8 @@ Global
 		{BD9A2116-B476-4AF0-979B-BC89785C17FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD9A2116-B476-4AF0-979B-BC89785C17FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD9A2116-B476-4AF0-979B-BC89785C17FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6CC3EAF3-BF73-49C7-8864-7DA1699CA22D}.Debug|Any CPU.ActiveCfg = Debug
+		{6CC3EAF3-BF73-49C7-8864-7DA1699CA22D}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
