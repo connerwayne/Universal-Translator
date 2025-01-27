@@ -2,7 +2,7 @@
 // This file is a part of the 'AuditTool' project.
 // This file is the code-behind for the 'MainWindow.xaml' file.
 
-// Currently no send email process. Need to figure out how to pull from a database such as Workday to find users managers. Will look into Farpa code for guidance.
+// Currently, email notifications for errors is up, but no send manager email process. Need to figure out how to pull from a database such as Workday to find users managers. Will look into Farpa code for guidance.
 // Currently, ReportData.xlsx is only sorted by LastLoginDate (if available).
 
 //  There is one button that performs all necessary steps for the user to send user audit approval emails.  It is designed to be a one-click process for the user, and auto-detects the incoming file format.
@@ -12,17 +12,15 @@
 //  The ProcessFileButton_Click method is the clickable button used to load the sorted data from the Excel file (ImportFileButtonh, convert the "LastLoginDate" to a standard DateTime format,
 //  sort the data by the converted "LastLoginDate", and save the sorted data to a new Excel file.
 
-//  This is only for testing purposes. The final version will be a console application that will run on a server and process the files automatically.
-//  Maybe an automatic import from email attachments. User sends an email with the vendors user list attached, the system processes the file and sends the approval emails to the users managers and
-//  BankSystems/IAM.
-//
-//  This would eliminate the need for the user to manually import the files and process them, saving time and reducing the risk of errors.
-//  Furthermore, this program could be expanded to maintain a list of email responses with approval/denials and non-respones. This could also allow the system to automatically send follow-up emails to
-//  users who have not responded, and eliminhates the manual effort required to create these records. This would require a database to store the email responses and a way to track the status of each user.
+//  
+//  potential automatic import from email attachments. User sends an email with the vendors user list attached, the system processes the file and sends the approval emails to the users managers.
+
+//  possible api from DocuSign to automate this process further. This would allow the system to automatically send the approval emails to the users managers and track the responses.
+//  This would eliminate the need for the user to manually send the emails and track the responses, saving time and reducing the risk of errors.
 
 //  Ultimately, something like an MS Teams Power App with a really nice GUI would be ideal here. From a security perspective, the system would rely on SSO to authenticate users. Integration with MS tools 
 //  would be seamless and would allow for easy tracking of user responses and approvals. The system could also be integrated with IAM systems (SailPoint?) to automatically update user access based on the responses, in theory.
-//  I am unsure on the backend methods needed to store the user responses and track the status of each user. I would need to research the best way to implement this feature.
+//  I am unsure on the backend methods needed to store the user responses and track the status of each user. I would need to research the best way to implement this feature, but DocuSign seems the best option.
 //  I would also need to research the best way to integrate with IAM systems to automatically update user access based on the responses. This would likely require an API integration.
 
 
@@ -46,7 +44,7 @@
 
 //  Public class User is used to define the properties of a user object. The properties are mapped to the standard header names used in the output file.
 //  It is referenced in 3 methods, LoadUsersFromCsv, ConstructEmailBody, and SendEmail. This is used to load the user data from the CSV file, construct
-//  the email body, and send the approval emails to the users managers.
+//  the email body, and will be linked to a db lookup for direct supervisor once the approval email function is up.
 
 
 using CsvHelper;
