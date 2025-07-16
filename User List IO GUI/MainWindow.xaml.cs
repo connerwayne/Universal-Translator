@@ -67,6 +67,7 @@ using ExcelDataReader;
 using System.Threading.Tasks;
 using System.Windows.Media.Animation;
 using WpfAnimatedGif;
+using Excel = Microsoft.Office.Interop.Excel;
 
 namespace AuditTool
 {
@@ -414,51 +415,129 @@ namespace AuditTool
             }
             return csvFilePath;
         }
+
+        // EPPLus  is a library for reading and writing Excel files without needing Excel installed on the machine.
+
+        //private DataTable LoadDataFromExcel(string filePath)
+        //{
+        //    DataTable dataTable = new DataTable();
+        //    //ExcelPackage.LicenseContext = LicenseContext.NonCommercial; //EPPlus license info
+        //    using (var package = new ExcelPackage(new FileInfo(filePath)))
+        //    {
+        //        ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
+        //        bool hasHeader = true;
+        //        foreach (var firstRowCell in worksheet.Cells[1, 1, 1, worksheet.Dimension.End.Column])
+        //        {
+        //            dataTable.Columns.Add(hasHeader ? firstRowCell.Text : $"Column {firstRowCell.Start.Column}");
+        //        }
+        //        var startRow = hasHeader ? 2 : 1;
+        //        for (int rowNum = startRow; rowNum <= worksheet.Dimension.End.Row; rowNum++)
+        //        {
+        //            var wsRow = worksheet.Cells[rowNum, 1, rowNum, worksheet.Dimension.End.Column];
+        //            DataRow row = dataTable.NewRow();
+        //            foreach (var cell in wsRow)
+        //            {
+        //                row[cell.Start.Column - 1] = cell.Text;
+        //            }
+        //            dataTable.Rows.Add(row);
+        //        }
+        //    }
+        //    return dataTable;
+        //}
+
         private DataTable LoadDataFromExcel(string filePath)
         {
             DataTable dataTable = new DataTable();
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            using (var package = new ExcelPackage(new FileInfo(filePath)))
+            var excelApp = new Excel.Application();
+            Excel.Workbook workbook = excelApp.Workbooks.Open(filePath);
+            Excel.Worksheet worksheet = workbook.Sheets[1];
+            Excel.Range usedRange = worksheet.UsedRange;
+
+            int colCount = usedRange.Columns.Count;
+            int rowCount = usedRange.Rows.Count;
+
+            // Add columns
+            for (int col = 1; col <= colCount; col++)
             {
-                ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-                bool hasHeader = true;
-                foreach (var firstRowCell in worksheet.Cells[1, 1, 1, worksheet.Dimension.End.Column])
-                {
-                    dataTable.Columns.Add(hasHeader ? firstRowCell.Text : $"Column {firstRowCell.Start.Column}");
-                }
-                var startRow = hasHeader ? 2 : 1;
-                for (int rowNum = startRow; rowNum <= worksheet.Dimension.End.Row; rowNum++)
-                {
-                    var wsRow = worksheet.Cells[rowNum, 1, rowNum, worksheet.Dimension.End.Column];
-                    DataRow row = dataTable.NewRow();
-                    foreach (var cell in wsRow)
-                    {
-                        row[cell.Start.Column - 1] = cell.Text;
-                    }
-                    dataTable.Rows.Add(row);
-                }
+                string columnName = usedRange.Cells[1, col].Value2?.ToString() ?? $"Column{col}";
+                dataTable.Columns.Add(columnName);
             }
+
+            // Add rows
+            for (int row = 2; row <= rowCount; row++)
+            {
+                DataRow dataRow = dataTable.NewRow();
+                for (int col = 1; col <= colCount; col++)
+                {
+                    dataRow[col - 1] = usedRange.Cells[row, col].Value2?.ToString() ?? string.Empty;
+                }
+                dataTable.Rows.Add(dataRow);
+            }
+
+            workbook.Close(false);
+            excelApp.Quit();
+
+            // Release COM objects
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(worksheet);
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(workbook);
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
+
             return dataTable;
         }
+
+        // EPPlus
+        //private void SaveDataToExcel(DataTable dataTable, string filePath)
+        //{
+        //    using (var package = new ExcelPackage())
+        //    {
+        //        ExcelWorksheet worksheet = package.Workbook.Worksheets.Add("ReportData");
+        //        for (int i = 0; i < dataTable.Columns.Count; i++)
+        //        {
+        //            worksheet.Cells[1, i + 1].Value = dataTable.Columns[i].ColumnName;
+        //        }
+        //        for (int i = 0; i < dataTable.Rows.Count; i++)
+        //        {
+        //            for (int j = 0; j < dataTable.Columns.Count; j++)
+        //            {
+        //                worksheet.Cells[i + 2, j + 1].Value = dataTable.Rows[i][j];
+        //            }
+        //        }
+        //        package.SaveAs(new FileInfo(filePath));
+        //    }
+        //}
+
         private void SaveDataToExcel(DataTable dataTable, string filePath)
         {
-            using (var package = new ExcelPackage())
+            var excelApp = new Excel.Application();
+            Excel.Workbook workbook = excelApp.Workbooks.Add();
+            Excel.Worksheet worksheet = workbook.ActiveSheet;
+
+            // Write column headers
+            for (int i = 0; i < dataTable.Columns.Count; i++)
             {
-                ExcelWorksheet worksheet = package.Workbook.Worksheets.Add("ReportData");
-                for (int i = 0; i < dataTable.Columns.Count; i++)
-                {
-                    worksheet.Cells[1, i + 1].Value = dataTable.Columns[i].ColumnName;
-                }
-                for (int i = 0; i < dataTable.Rows.Count; i++)
-                {
-                    for (int j = 0; j < dataTable.Columns.Count; j++)
-                    {
-                        worksheet.Cells[i + 2, j + 1].Value = dataTable.Rows[i][j];
-                    }
-                }
-                package.SaveAs(new FileInfo(filePath));
+                worksheet.Cells[1, i + 1] = dataTable.Columns[i].ColumnName;
             }
+
+            // Write data rows
+            for (int i = 0; i < dataTable.Rows.Count; i++)
+            {
+                for (int j = 0; j < dataTable.Columns.Count; j++)
+                {
+                    worksheet.Cells[i + 2, j + 1] = dataTable.Rows[i][j]?.ToString();
+                }
+            }
+
+            // Save the workbook
+            workbook.SaveAs(filePath);
+            workbook.Close();
+            excelApp.Quit();
+
+            // Release COM objects
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(worksheet);
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(workbook);
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
         }
+
         private void LogErrorAndSendEmail(string errorMessage)
         {
             // Log the error  
@@ -484,17 +563,54 @@ namespace AuditTool
             DataView dataView = dataTable.DefaultView;
             return dataView.ToTable();
         }
-        private void SaveDataTableToExcel(DataTable dataTable, string excelFilePath)
+
+        //This is EPPplus, it enables saving of DataTable to Excel files without a machine that has Excel installed. 
+
+        //private void SaveDataTableToExcel(DataTable dataTable, string excelFilePath)
+        //{
+        //    ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        //    using (var package = new ExcelPackage())
+        //    {
+        //        var worksheet = package.Workbook.Worksheets.Add("SortedData");
+        //        worksheet.Cells["A1"].LoadFromDataTable(dataTable, true);
+        //        package.SaveAs(new FileInfo(excelFilePath));
+        //    }
+        //}
+
+        
+
+private void SaveDataTableToExcel(DataTable dataTable, string excelFilePath)
+    {
+        var excelApp = new Excel.Application();
+        Excel.Workbook workbook = excelApp.Workbooks.Add();
+        Excel.Worksheet worksheet = workbook.ActiveSheet;
+
+        // Write column headers
+        for (int i = 0; i < dataTable.Columns.Count; i++)
         {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            using (var package = new ExcelPackage())
+            worksheet.Cells[1, i + 1] = dataTable.Columns[i].ColumnName;
+        }
+
+        // Write data rows
+        for (int i = 0; i < dataTable.Rows.Count; i++)
+        {
+            for (int j = 0; j < dataTable.Columns.Count; j++)
             {
-                var worksheet = package.Workbook.Worksheets.Add("SortedData");
-                worksheet.Cells["A1"].LoadFromDataTable(dataTable, true);
-                package.SaveAs(new FileInfo(excelFilePath));
+                worksheet.Cells[i + 2, j + 1] = dataTable.Rows[i][j]?.ToString();
             }
         }
-        private void LoadUsersFromCsv(string filePath)
+
+        // Save the workbook
+        workbook.SaveAs(excelFilePath);
+        workbook.Close();
+        excelApp.Quit();
+
+        // Release COM objects
+        System.Runtime.InteropServices.Marshal.ReleaseComObject(worksheet);
+        System.Runtime.InteropServices.Marshal.ReleaseComObject(workbook);
+        System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
+    }
+    private void LoadUsersFromCsv(string filePath)
         {
             var users = new List<User>();
             // Define the dictionary to map alternative header names to standard header names
@@ -541,32 +657,76 @@ namespace AuditTool
                 MessageBox.Show($"Error reading ingest file for LoadUsersFromCsv method: {ex.Message}");
             }          
         }
+
+        // EPPlus 
+
+        //private DataTable LoadExcelIntoDataTable(string excelFilePath)
+        //{
+        //    DataTable dataTable = new DataTable();
+        //    using (ExcelPackage package = new ExcelPackage(new FileInfo(excelFilePath)))
+        //    {
+        //        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        //        ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
+        //        bool hasHeader = true; // adjust it accordingly
+        //        foreach (var firstRowCell in worksheet.Cells[1, 1, 1, worksheet.Dimension.End.Column])
+        //        {
+        //            dataTable.Columns.Add(hasHeader ? firstRowCell.Text : $"Column {firstRowCell.Start.Column}");
+        //        }
+        //        var startRow = hasHeader ? 2 : 1;
+        //        for (var rowNum = startRow; rowNum <= worksheet.Dimension.End.Row; rowNum++)
+        //        {
+        //            var wsRow = worksheet.Cells[rowNum, 1, rowNum, worksheet.Dimension.End.Column];
+        //            DataRow row = dataTable.NewRow();
+        //            foreach (var cell in wsRow)
+        //            {
+        //                row[cell.Start.Column - 1] = cell.Text;
+        //            }
+        //            dataTable.Rows.Add(row);
+        //        }
+        //    }
+        //    return dataTable;
+        //}
+
         private DataTable LoadExcelIntoDataTable(string excelFilePath)
         {
             DataTable dataTable = new DataTable();
-            using (ExcelPackage package = new ExcelPackage(new FileInfo(excelFilePath)))
+            var excelApp = new Excel.Application();
+            Excel.Workbook workbook = excelApp.Workbooks.Open(excelFilePath);
+            Excel.Worksheet worksheet = workbook.Sheets[1];
+            Excel.Range usedRange = worksheet.UsedRange;
+
+            int colCount = usedRange.Columns.Count;
+            int rowCount = usedRange.Rows.Count;
+
+            // Add columns
+            for (int col = 1; col <= colCount; col++)
             {
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-                ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-                bool hasHeader = true; // adjust it accordingly
-                foreach (var firstRowCell in worksheet.Cells[1, 1, 1, worksheet.Dimension.End.Column])
-                {
-                    dataTable.Columns.Add(hasHeader ? firstRowCell.Text : $"Column {firstRowCell.Start.Column}");
-                }
-                var startRow = hasHeader ? 2 : 1;
-                for (var rowNum = startRow; rowNum <= worksheet.Dimension.End.Row; rowNum++)
-                {
-                    var wsRow = worksheet.Cells[rowNum, 1, rowNum, worksheet.Dimension.End.Column];
-                    DataRow row = dataTable.NewRow();
-                    foreach (var cell in wsRow)
-                    {
-                        row[cell.Start.Column - 1] = cell.Text;
-                    }
-                    dataTable.Rows.Add(row);
-                }
+                string columnName = usedRange.Cells[1, col].Value2?.ToString() ?? $"Column{col}";
+                dataTable.Columns.Add(columnName);
             }
+
+            // Add rows
+            for (int row = 2; row <= rowCount; row++)
+            {
+                DataRow dataRow = dataTable.NewRow();
+                for (int col = 1; col <= colCount; col++)
+                {
+                    dataRow[col - 1] = usedRange.Cells[row, col].Value2?.ToString() ?? string.Empty;
+                }
+                dataTable.Rows.Add(dataRow);
+            }
+
+            workbook.Close(false);
+            excelApp.Quit();
+
+            // Release COM objects
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(worksheet);
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(workbook);
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
+
             return dataTable;
         }
+
 
         //////////// this processes the file in one step. simple csv to xls conversion. 
         //////////private void OnButtonClick(object sender, RoutedEventArgs e)
@@ -612,5 +772,5 @@ namespace AuditTool
         //////////////////    mailItem.HTMLBody = emailBody;
         //////////////////    mailItem.Send();
         //////////////////}   
-    }       
+    }
 }
