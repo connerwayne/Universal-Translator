@@ -262,7 +262,7 @@ namespace AuditTool
                 // Update status text and show progress bar and rocket
                 statusText.Text = "Loading CSV data...";
                 progressBar.Visibility = Visibility.Visible;
-                rocket.Visibility = Visibility.Visible;
+                //rocket.Visibility = Visibility.Visible;
                 progressBar.Value = 0;
 
                 // Start the animation
@@ -275,7 +275,7 @@ namespace AuditTool
                     MessageBox.Show("LoadCsvIntoDataTable method Failed to load data from the file.", "Error");
                     progressBarAnimation.Stop();
                     progressBar.Visibility = Visibility.Collapsed;
-                    rocket.Visibility = Visibility.Collapsed;
+                    //rocket.Visibility = Visibility.Collapsed;
                     return;
                 }
 
@@ -297,7 +297,7 @@ namespace AuditTool
                 progressBar.Value = 100;
                 statusText.Text = "File processed successfully.";
                 progressBar.Visibility = Visibility.Collapsed;
-                rocket.Visibility = Visibility.Collapsed;
+                //rocket.Visibility = Visibility.Collapsed;
                 progressBarAnimation.Stop();
                 MessageBox.Show($"File has been processed and saved to {excelFilePath}", "File Processed");
             }
@@ -310,7 +310,7 @@ namespace AuditTool
                 // Update status text and show progress bar and rocket
                 statusText.Text = "Loading data from Excel...";
                 progressBar.Visibility = Visibility.Visible;
-                rocket.Visibility = Visibility.Visible;
+                //rocket.Visibility = Visibility.Visible;
                 progressBar.Value = 0;
 
                 // Start the animation
@@ -353,7 +353,7 @@ namespace AuditTool
                     progressBar.Value = 100;
                     statusText.Text = "Report generated successfully.";
                     progressBar.Visibility = Visibility.Collapsed;
-                    rocket.Visibility = Visibility.Collapsed;
+                    //rocket.Visibility = Visibility.Collapsed;
                     progressBarAnimation.Stop();
                     MessageBox.Show("Report generated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -364,7 +364,7 @@ namespace AuditTool
                     progressBar.Value = 100;
                     statusText.Text = "Report generated successfully, but without 'LastLoginDate' sorting!";
                     progressBar.Visibility = Visibility.Collapsed;
-                    rocket.Visibility = Visibility.Collapsed;
+                    //rocket.Visibility = Visibility.Collapsed;
                     progressBarAnimation.Stop();
                     MessageBox.Show("Report generated successfully, but without 'LastLoginDate' sorting!", "Success with no LastLoginDate", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
